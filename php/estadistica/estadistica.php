@@ -5,8 +5,10 @@ if (!isset($_SESSION['tipo_usuario_id'])) {
     exit;
 }
 
-if (!isset($_SESSION['tipo_usuario_id']) || ($_SESSION['tipo_usuario_id'] != 7 && $_SESSION['tipo_usuario_id'] != 1)) {
-    header('Location: ../menu.php');
+$usuarios_permitidos = [1, 2, 7,9];
+if (!in_array($_SESSION['tipo_usuario_id'], $usuarios_permitidos) && 
+    !in_array($_SESSION['tipo_usuario_id2'], $usuarios_permitidos)) {
+    header('Location: ../../../menu.php');
     exit;
 }
 

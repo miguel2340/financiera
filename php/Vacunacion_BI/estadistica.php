@@ -5,7 +5,7 @@ if (!isset($_SESSION['tipo_usuario_id'])) {
     exit;
 }
 
-if (!isset($_SESSION['tipo_usuario_id']) || ($_SESSION['tipo_usuario_id'] != 7 && $_SESSION['tipo_usuario_id'] != 1)) {
+if (!isset($_SESSION['tipo_usuario_id']) || ($_SESSION['tipo_usuario_id'] != 10 && $_SESSION['tipo_usuario_id'] != 1)) {
     header('Location: ../menu.php');
     exit;
 }
