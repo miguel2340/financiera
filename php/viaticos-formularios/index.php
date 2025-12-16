@@ -13,14 +13,117 @@ require_once __DIR__ . '/../../config.php'; // ajusta a ../config.php si aplica
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
   <!-- Select2 (buscador en selects) -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css">
-  <style>
-    .file-list { max-height: 280px; overflow:auto; }
-    .preview-box { height: 420px; border:1px solid #ddd; border-radius:8px; }
-    .preview-box iframe, .preview-box img { width:100%; height:100%; border:0; object-fit:contain; }
-    .select2-container--default .select2-selection--single { height: 38px; }
-    .select2-selection__rendered { line-height: 38px !important; }
-    .select2-selection__arrow { height: 36px !important; }
-  </style>
+<style>
+  /* --- Modal archivos --- */
+  .file-list { max-height: 280px; overflow:auto; }
+  .preview-box { height: 420px; border:1px solid #ddd; border-radius:8px; }
+  .preview-box iframe,
+  .preview-box img { width:100%; height:100%; border:0; object-fit:contain; }
+
+  /* --- Select2 altura bootstrap --- */
+  .select2-container--default .select2-selection--single { height: 38px; }
+  .select2-selection__rendered { line-height: 38px !important; }
+  .select2-selection__arrow { height: 36px !important; }
+
+  /* --- Wrapper tabla con scroll vertical + barra horizontal fija abajo --- */
+/* contenedor general de la tabla */
+.table-wrap{
+  position: relative;
+}
+
+/* contenedor que scrollea vertical */
+.table-scroll{
+  overflow: auto;
+  max-height: 70vh;
+  padding-bottom: 18px;  /* 👈 reserva espacio para el scroll horizontal */
+}
+
+/* scroll horizontal fijo ABAJO del contenedor */
+.x-scrollbar{
+  position: sticky;
+  bottom: 0;
+  left: 0;
+  z-index: 10;
+  height: 16px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  background: #fff;
+  border-top: 1px solid #e5e7eb;
+}
+
+
+  .x-scrollbar-inner{ height: 1px; }
+
+  /* --- COMPACTACIÓN (evita que bootstrap vuelva a estirar la tabla) --- */
+  #tablaViaticos{
+    width: max-content !important; /* clave: no se estira al 100% */
+    table-layout: fixed;           /* anchos estables */
+    white-space: nowrap;
+    font-size: 12px;
+  }
+
+  #tablaViaticos th,
+  #tablaViaticos td{
+    padding: .20rem .35rem !important;
+    vertical-align: middle;
+  }
+
+  /* Columna corta: Región */
+  #tablaViaticos .col-region{
+    width: 55px !important;
+    max-width: 55px !important;
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  /* (Opcional recomendado) para que no empujen tanto */
+  #tablaViaticos .col-depto{
+    width: 140px !important;
+    max-width: 140px !important;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  #tablaViaticos .col-mun{
+    width: 160px !important;
+    max-width: 160px !important;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* Botones compactos dentro de tabla */
+  #tablaViaticos .btn{
+    padding: .15rem .35rem !important;
+    font-size: 12px !important;
+  }
+
+  /* Bloquea el scroll vertical del navegador */
+html, body{
+  height: 100%;
+  overflow: hidden; /* quita el scroll del navegador */
+}
+
+/* Deja scroll SOLO en el contenedor de la tabla */
+.table-scroll{
+  overflow: auto;
+  max-height: 70vh; /* ajusta */
+}
+
+/* El contenedor principal ocupa la pantalla y no crece */
+body .container{
+  height: calc(100vh - 20px); /* ajusta si quieres */
+  overflow: hidden;
+}
+
+/* La tabla puede scrollear dentro */
+.table-scroll{
+  height: calc(100vh - 320px); /* ajusta según el alto de filtros/encabezado */
+  overflow: auto;
+}
+
+</style>
+
 </head>
 <body class="bg-light">
 <div class="container py-4">
@@ -70,7 +173,16 @@ require_once __DIR__ . '/../../config.php'; // ajusta a ../config.php si aplica
           <option value="">-- Todos --</option>
         </select>
       </div>
+          <div class="col-md-3">
+      <label class="form-label">Pago</label>
+      <select name="pago" class="form-select">
+        <option value="">-- Todos --</option>
+        <option value="pagado"   <?= (($_GET['pago'] ?? '')==='pagado'?'selected':'') ?>>Pagado (con comprobante)</option>
+        <option value="sin_pago" <?= (($_GET['pago'] ?? '')==='sin_pago'?'selected':'') ?>>Sin pago (sin comprobante)</option>
+      </select>
     </div>
+    </div>
+
 
     <div class="mt-3 d-flex gap-2">
       <button class="btn btn-primary">Filtrar</button>
@@ -104,6 +216,15 @@ if (!empty($_GET['numero_identificacion_titular'])) {
     $wheres[] = "s.numero_identificacion_titular = ?";
     $params[] = $_GET['numero_identificacion_titular'];
 }
+$pago = trim((string)($_GET['pago'] ?? ''));
+if ($pago === 'pagado') {
+    // con comprobante
+    $wheres[] = "(pvx.comprobante IS NOT NULL AND LTRIM(RTRIM(pvx.comprobante)) <> '')";
+}
+if ($pago === 'sin_pago') {
+    // sin comprobante
+    $wheres[] = "(pvx.comprobante IS NULL OR LTRIM(RTRIM(pvx.comprobante)) = '')";
+}
 
 // --- paginación ---
 $perPage = 1000;
@@ -133,20 +254,27 @@ WHERE ue.rn = 1
 // --- COUNT total ---
 $sqlCount = "
 ;WITH ultimo_evento AS (
-    SELECT 
-        e.id_solicitudes,
-        e.radicado,
-        ROW_NUMBER() OVER(
-            PARTITION BY e.radicado
-            ORDER BY e.fecha_estado DESC, e.id_solicitudes DESC
-        ) AS rn
+    SELECT e.id_solicitudes, e.radicado,
+           ROW_NUMBER() OVER(PARTITION BY e.radicado ORDER BY e.fecha_estado DESC, e.id_solicitudes DESC) AS rn
     FROM gestion_terceros.dbo.evento_solicitudes e
+),
+pv_comp AS (
+    SELECT pv.radicado,
+           pv.comprobante,
+           pv.fecha AS fecha_pago,
+           ROW_NUMBER() OVER(
+             PARTITION BY pv.radicado
+             ORDER BY ISNULL(pv.fecha,'1900-01-01') DESC, pv.id DESC
+           ) AS rn
+    FROM gestion_terceros.dbo.pagos_viaticos pv
 )
 SELECT COUNT(1) AS total
 FROM gestion_terceros.dbo.solicitudes s
 JOIN ultimo_evento ue ON s.radicado = ue.radicado
+LEFT JOIN pv_comp pvx ON pvx.radicado = s.rad_via AND pvx.rn = 1
 WHERE ue.rn = 1
 " . ($wheres ? " AND " . implode(" AND ", $wheres) : "");
+
 
 $stmtCount = sqlsrv_query($conn, $sqlCount, $params);
 
@@ -175,6 +303,16 @@ $sql = "
             ORDER BY e.fecha_estado DESC, e.id_solicitudes DESC
         ) AS rn
     FROM gestion_terceros.dbo.evento_solicitudes e
+),
+pv_comp AS (
+    SELECT pv.radicado,
+           pv.comprobante,
+           pv.fecha AS fecha_pago,
+           ROW_NUMBER() OVER(
+             PARTITION BY pv.radicado
+             ORDER BY ISNULL(pv.fecha,'1900-01-01') DESC, pv.id DESC
+           ) AS rn
+    FROM gestion_terceros.dbo.pagos_viaticos pv
 )
 SELECT 
     s.radicado,
@@ -187,14 +325,18 @@ SELECT
     ue.fecha_estado,
     s.region,
     s.departamento,
-    s.municipio
+    s.municipio,
+    pvx.comprobante,
+    pvx.fecha_pago
 FROM gestion_terceros.dbo.solicitudes s
 JOIN ultimo_evento ue ON s.radicado = ue.radicado
+LEFT JOIN pv_comp pvx ON pvx.radicado = s.rad_via AND pvx.rn = 1
 WHERE ue.rn = 1
 " . ($wheres ? " AND " . implode(" AND ", $wheres) : "") . "
 ORDER BY s.rad_via_num, s.rad_via
 OFFSET ? ROWS FETCH NEXT ? ROWS ONLY;
 ";
+
 
 $paramsPage = array_merge($params, [$offset, $perPage]);
 
@@ -253,17 +395,17 @@ if ($stmt === false) {
       </nav>
     </div>
 
-    <!-- TABLA (dentro del MISMO else) -->
-    <div class="card">
-      <div class="table-responsive">
-        <table class="table table-sm table-striped align-middle mb-0">
+<div class="table-wrap">
+  <!-- Scroll real (tabla) -->
+  <div class="table-scroll" id="tableScroll">
+    <table class="table table-sm table-striped align-middle mb-0" id="tablaViaticos">
           <thead class="table-light">
             <tr>
               <th>radicado</th>
               <th>Identificación</th>
-              <th>Región</th>
-              <th>Departamento</th>
-              <th>Municipio</th>
+              <th class="col-region">Región</th>
+              <th class="col-depto">Departamento</th>
+              <th class="col-mun">Municipio</th>
               <th>Carpeta (url_drive)</th>
               <th>calificacion departamental</th>
               <th>fecha de calificacion</th>
@@ -271,6 +413,9 @@ if ($stmt === false) {
               <th>fecha de calificacion</th>
               <th>Observaciones</th>
               <th>Acciones</th>
+              <th>Comprobante</th>
+              <th>Fecha de pago</th>
+
             </tr>
           </thead>
           <tbody>
@@ -287,9 +432,10 @@ if ($stmt === false) {
             <tr>
               <td><?= htmlspecialchars((string)$radVia) ?></td>
               <td><?= htmlspecialchars((string)$row['numero_identificacion']) ?></td>
-              <td><?= htmlspecialchars((string)$row['region']) ?></td>
-              <td><?= htmlspecialchars((string)$row['departamento']) ?></td>
-              <td><?= htmlspecialchars((string)$row['municipio']) ?></td>
+              <td class="col-region"><?= htmlspecialchars((string)$row['region']) ?></td>
+              <td class="col-depto"><?= htmlspecialchars((string)$row['departamento']) ?></td>
+              <td class="col-mun"><?= htmlspecialchars((string)$row['municipio']) ?></td>
+
               <td>
                 <?php if (!empty($url)): ?>
                   <button
@@ -342,12 +488,35 @@ if ($stmt === false) {
                   <?php endif; ?>
                 <?php endif; ?>
               </td>
+                <?php
+    $comp = trim((string)($row['comprobante'] ?? ''));
+    $fechaPago = $row['fecha_pago'] ?? null;
+    $fechaPagoTxt = ($fechaPago instanceof DateTime) ? $fechaPago->format('Y-m-d') : htmlspecialchars((string)$fechaPago);
+  ?>
+  <td class="nowrap">
+    <?= htmlspecialchars($comp) ?>
+    <?php if ($comp !== ''): ?>
+      <button type="button"
+              class="btn btn-sm btn-outline-success btn-comprobante ms-1"
+              data-comp="<?= htmlspecialchars($comp) ?>">
+        Ver
+      </button>
+    <?php else: ?>
+      <span class="text-muted">—</span>
+    <?php endif; ?>
+  </td>
+  <td><?= $fechaPagoTxt ?: '<span class="text-muted">—</span>' ?></td>
+
             </tr>
           <?php endwhile; ?>
           </tbody>
-        </table>
-      </div>
-    </div>
+    </table>
+  </div>
+
+  <div class="x-scrollbar" id="xScrollbar" aria-hidden="true">
+    <div class="x-scrollbar-inner" id="xScrollbarInner"></div>
+  </div>
+</div>
 <?php
 } // <-- CIERRE CORRECTO del else de $stmt ok
 ?>
@@ -468,6 +637,23 @@ if ($stmt === false) {
         <button class="btn btn-primary" type="submit">Guardar corrección</button>
       </div>
     </form>
+  </div>
+</div>
+<!-- Modal Comprobante -->
+<div class="modal fade" id="modalComprobante" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h6 class="modal-title">Comprobante: <span id="cmpLbl"></span></h6>
+        <div class="d-flex gap-2">
+          <a class="btn btn-sm btn-outline-primary" id="cmpDownload" href="#" target="_blank" rel="noopener">Descargar</a>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        </div>
+      </div>
+      <div class="modal-body p-0" style="height:75vh;">
+        <iframe id="cmpFrame" src="about:blank" style="width:100%; height:100%; border:0;"></iframe>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -769,6 +955,65 @@ document.getElementById('formCorregir').addEventListener('submit', async (e) => 
     alert('Error de red al enviar la corrección.');
   }
 });
+let modalComprobante = new bootstrap.Modal(document.getElementById('modalComprobante'));
+
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest('.btn-comprobante');
+  if (!btn) return;
+
+  const comp = btn.dataset.comp || '';
+  if (!comp) return;
+
+  document.getElementById('cmpLbl').textContent = comp;
+
+  // Igual que tu vista pequeña (inline para iframe)
+  const urlInline = 'ver_comprobante.php?comp=' + encodeURIComponent(comp) + '&find=1&inline=1';
+  const urlDown   = 'ver_comprobante.php?comp=' + encodeURIComponent(comp) + '&find=1';
+
+  document.getElementById('cmpFrame').src = urlInline;
+  document.getElementById('cmpDownload').href = urlDown;
+
+  modalComprobante.show();
+});
+
+// limpiar al cerrar
+document.getElementById('modalComprobante').addEventListener('hidden.bs.modal', () => {
+  document.getElementById('cmpFrame').src = 'about:blank';
+});
+(function(){
+  const tableScroll = document.getElementById('tableScroll');
+  const table       = document.getElementById('tablaViaticos');
+  const xScrollbar  = document.getElementById('xScrollbar');
+  const inner       = document.getElementById('xScrollbarInner');
+
+  if (!tableScroll || !table || !xScrollbar || !inner) return;
+
+  function syncWidth(){
+    inner.style.width = table.scrollWidth + 'px';
+  }
+
+  let lock = false;
+
+  tableScroll.addEventListener('scroll', () => {
+    if (lock) return;
+    lock = true;
+    xScrollbar.scrollLeft = tableScroll.scrollLeft;
+    lock = false;
+  });
+
+  xScrollbar.addEventListener('scroll', () => {
+    if (lock) return;
+    lock = true;
+    tableScroll.scrollLeft = xScrollbar.scrollLeft;
+    lock = false;
+  });
+
+  window.addEventListener('resize', syncWidth);
+syncWidth();
+setTimeout(syncWidth, 300);
+setTimeout(syncWidth, 900);
+
+})();
 
 </script>
 </body>

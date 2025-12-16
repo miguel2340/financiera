@@ -259,7 +259,7 @@ body {
                                 <li><a href="matrices/menu_matrices_anticipo.php" class="block px-4 py-2 hover:bg-gray-200">Anticipo</a></li>
                                 <li><a href="matrices/menu_matrices_viaticos.php" class="block px-4 py-2 hover:bg-gray-200">viaticos</a></li>
 								<li><a href="matrices/viaticos/index.php" class="block px-4 py-2 hover:bg-gray-200">viaticos registro uncio</a></li>
-								<li><a href="listado_rembolso/cargue_viaticos/upload_viaticos.php" class="block px-4 py-2 hover:bg-gray-200">cargue de pagos para viaticos</a></li>
+								<li><a href="lista_solicitud/cargue_viaticos/upload_viaticos.php" class="block px-4 py-2 hover:bg-gray-200">cargue de pagos para viaticos</a></li>
                             </ul>
                         </li>
                     </ul>
