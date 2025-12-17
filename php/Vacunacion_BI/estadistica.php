@@ -9,10 +9,9 @@ if (!isset($_SESSION['tipo_usuario_id']) || ($_SESSION['tipo_usuario_id'] != 10 
     header('Location: ../menu.php');
     exit;
 }
+$isRoot = isset($_SESSION['tipo_usuario_id']) && $_SESSION['tipo_usuario_id'] == 1;
 
 ?>
-
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -120,6 +119,14 @@ if (!isset($_SESSION['tipo_usuario_id']) || ($_SESSION['tipo_usuario_id'] != 10 
                 aria-selected="false">
                 Actualizacion de datos
             </button>
+            <?php if ($isRoot): ?>
+            <button
+                class="tab-button px-5 py-3 text-sm font-semibold text-gray-600 bg-gray-50 border-b-2 border-transparent hover:text-blue-700 focus:outline-none"
+                data-tab-target="tab-nuevo-corte"
+                aria-selected="false">
+                Actualizar nuevo corte
+            </button>
+            <?php endif; ?>
         </div>
 
         <div class="p-4">
@@ -211,10 +218,84 @@ if (!isset($_SESSION['tipo_usuario_id']) || ($_SESSION['tipo_usuario_id'] != 10 
                     </div>
                 </div>
             </div>
+
+                        <?php if ($isRoot): ?>
+            <div id="tab-nuevo-corte" data-tab-panel="tab-nuevo-corte" class="hidden">
+                <div class="w-full h-full bg-gray-50 border border-dashed border-blue-200 rounded-lg p-6 space-y-4">
+                    <div>
+                        <h2 class="text-lg font-semibold text-blue-700 mb-2">Actualizar nuevo corte (solo root)</h2>
+                        <p class="text-gray-700">Sube el archivo TXT del ministerio para preparar el siguiente corte y validar nuevos vacunados.</p>
+                    </div>
+
+                    <div id="newcut-dropzone" class="border-2 border-dashed border-blue-400 bg-white rounded-lg p-6 text-center cursor-pointer transition hover:border-blue-600 hover:bg-blue-50">
+                        <p class="text-sm text-gray-600 mb-2 font-semibold">Arrastra y suelta el archivo TXT aqui</p>
+                        <p class="text-xs text-gray-500">Formato esperado: campos separados por | con encabezado requerido.</p>
+                        <input id="newcut-file" type="file" accept=".txt,.zip,.rar" class="hidden" />
+                    </div>
+
+                    <div class="flex items-center justify-between">
+                        <div id="newcut-feedback" class="text-sm text-gray-700">Ningun archivo seleccionado.</div>
+                        <button id="newcut-validate" class="bg-blue-600 text-white px-4 py-2 rounded disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                            Validar nuevo corte
+                        </button>
+                    </div>
+
+                    <div id="newcut-summary" class="text-sm text-gray-700 bg-white border border-blue-100 rounded p-3 hidden"></div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                        <div class="bg-white border border-blue-100 rounded-lg p-3">
+                            <div class="flex items-center justify-between mb-2">
+                                <h3 class="font-semibold text-blue-700">Nuevos vacunados (ministerio)</h3>
+                                <span class="text-xs text-gray-500" id="newcut-count-nuevos">0</span>
+                            </div>
+                            <div class="overflow-auto max-h-80">
+                                <table class="min-w-full text-xs text-left">
+                                    <thead class="bg-blue-50 text-blue-700">
+                                        <tr>
+                                            <th class="px-2 py-1">Tipo</th>
+                                            <th class="px-2 py-1">Documento</th>
+                                            <th class="px-2 py-1">FechaUltimaVacuna</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="newcut-table-nuevos" class="divide-y divide-gray-100">
+                                        <tr><td colspan="3" class="px-2 py-2 text-gray-500 text-center">Sin datos</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="bg-white border border-red-100 rounded-lg p-3">
+                            <div class="flex items-center justify-between mb-2">
+                                <h3 class="font-semibold text-red-700">Registros existentes/invalidos</h3>
+                                <div class="flex flex-col text-right">
+                                    <span class="text-xs text-gray-500" id="newcut-count-rechazados">0</span>
+                                    <span class="text-xs text-gray-500">Con Fecha Ministerio: <span id="newcut-count-confecha">0</span></span>
+                                </div>
+                            </div>
+                            <div class="overflow-auto max-h-80">
+                                <table class="min-w-full text-xs text-left">
+                                    <thead class="bg-red-50 text-red-700">
+                                        <tr>
+                                            <th class="px-2 py-1">Documento</th>
+                                            <th class="px-2 py-1">Motivo</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="newcut-table-rechazados" class="divide-y divide-gray-100">
+                                        <tr><td colspan="2" class="px-2 py-2 text-gray-500 text-center">Sin datos</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="text-xs text-gray-500">
+                        Encabezado requerido (pipe |): Consecutivo|Tipo de Documento|Numero de Documento|Primer Nombre|Primer Apellido|Fecha Nacimiento|Dane Dpto|Dane Municipio|Column 8|FechaUltimaVacuna. Se valida el siguiente corte (max corte + 1) y se identifica nuevos vacunados por llave Tipo+Documento.
+                    </div>
+                </div>
+            </div>
+            <?php endif; ?>
         </div>
     </div>
 
 </body>
 </html>
-
-

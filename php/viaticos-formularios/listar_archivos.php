@@ -29,6 +29,7 @@ foreach ($all as $name) {
     'size' => $size ?: 0,
     'previewUrl'  => "stream.php?b64={$b64}",
     'downloadUrl' => "download.php?b64={$b64}",
+    'b64'   => $b64, // identificador seguro para borrar
   ];
 }
 
