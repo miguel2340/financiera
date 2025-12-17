@@ -579,15 +579,15 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['datos_json'])) {
                                                                                                 
         if ($i == 1) {
 
-            if ($t_cuenta == '03') { 
+            if ($t_cuenta == 'SV') { 
                 $x_pos = 153;   
                 $y_pos = 275.4;  
-            } elseif ($t_cuenta == 'SV') {  
+            } elseif ($t_cuenta == '03') {  
                 $x_pos = 178.5;  
                 $y_pos = 275.4; 
             }
         
-            if ($t_cuenta == '03' || $t_cuenta == 'SV') {
+            if ($t_cuenta == 'SV' || $t_cuenta == '03') {
                 $pdf->SetXY($x_pos, $y_pos);  
                 $pdf->Write(0, 'X');  
             }

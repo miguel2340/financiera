@@ -607,33 +607,34 @@ document.addEventListener('click', async (e) => {
       <ul class="lista-archivos">
         ${data.files.map(f => `
           <li>
-            <span class="archivo" data-preview="${f.previewUrl || ''}" data-ext="${(f.ext||'').toLowerCase()}">${f.name}</span>
+            <span class="archivo"
+                  style="cursor:pointer;text-decoration:underline"
+                  title="Abrir vista previa en el navegador"
+                  data-preview="${f.previewUrl || ''}">
+              ${f.name}
+            </span>
             <a href="${f.downloadUrl}" target="_blank" rel="noopener">Descargar</a>
           </li>
         `).join('')}
       </ul>
-      <div class="preview-box" id="previewBox">Selecciona un archivo para previsualizar…</div>
     `;
     cont.innerHTML = html;
 
     // Delegación para click en cada archivo -> preview
+    // Delegación para click en cada archivo -> abrir en navegador
     cont.querySelectorAll('.archivo').forEach(el => {
       el.addEventListener('click', () => {
-        const box = cont.querySelector('#previewBox');
-        const prev = el.dataset.preview || '';
-        const ext  = (el.dataset.ext || '').toLowerCase();
+        const prev = (el.dataset.preview || '').trim();
+        if (!prev) return alert('Sin vista previa.');
 
-        if (!prev) { box.textContent = 'Sin vista previa.'; return; }
+        // ✅ Opción A: abrir en nueva pestaña
+        window.open(prev, '_blank', 'noopener');
 
-        if (['png','jpg','jpeg','gif','webp','bmp'].includes(ext)) {
-          box.innerHTML = `<img src="${prev}" alt="preview" style="max-width:100%;max-height:400px;object-fit:contain;">`;
-        } else if (ext === 'pdf' || ['txt','csv','log','md','json','xml'].includes(ext)) {
-          box.innerHTML = `<iframe src="${prev}" style="width:100%;height:420px;border:0;"></iframe>`;
-        } else {
-          box.textContent = `No hay vista previa para .${ext}. Use "Descargar".`;
-        }
+        // ✅ Opción B (si prefieres MISMA pestaña): descomenta esta
+        // window.location.href = prev;
       });
     });
+
 
   } catch (err) {
     console.error(err);
