@@ -537,7 +537,7 @@ if ($stmt === false) {
           <div class="col-md-4">
             <div class="card">
               <div class="card-header py-2">
-                <small class="text-muted">Lista de archivos</small>
+                <small class="text-muted mb-0">Lista de archivos</small>
               </div>
               <div class="card-body file-list p-0">
                 <ul class="list-group list-group-flush" id="listaArchivos"></ul>
@@ -551,9 +551,52 @@ if ($stmt === false) {
           </div>
         </div>
       </div>
-      <div class="modal-footer d-flex justify-content-between">
+      <div class="modal-footer d-flex justify-content-between align-items-center flex-wrap gap-2">
         <small class="text-muted" id="modalPath"></small>
-        <button class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+        <div class="d-flex gap-2">
+          <button class="btn btn-primary" type="button" id="btnOpenUpload">Subir archivos</button>
+          <button class="btn btn-secondary" data-bs-dismiss="modal" type="button">Cerrar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- Modal selección archivos -->
+<div class="modal fade" id="modalSeleccionArchivos" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h6 class="modal-title">Subir archivos</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <div class="modal-body">
+        <div class="small text-muted mb-2">Destino: <span id="uploadPathText">-</span></div>
+        <input class="form-control" type="file" id="uploadInputModal" multiple>
+        <div class="mt-2">
+          <ul class="list-group" id="uploadList"></ul>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" type="button" data-bs-dismiss="modal">Cancelar</button>
+        <button class="btn btn-primary" type="button" id="btnDoUpload" disabled>Subir</button>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- Modal confirmar eliminar -->
+<div class="modal fade" id="modalConfirmDelete" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h6 class="modal-title">Eliminar archivo</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <div class="modal-body">
+        <p class="mb-0">¿Seguro deseas eliminar el archivo <strong id="delFileName"></strong>?</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" type="button" data-bs-dismiss="modal">Cancelar</button>
+        <button class="btn btn-danger" type="button" id="btnDeleteConfirm">Eliminar</button>
       </div>
     </div>
   </div>
@@ -731,6 +774,70 @@ selDepto.on('change', () => {
 
 // ---------- MODAL ARCHIVOS ----------
 let bsModal = new bootstrap.Modal(document.getElementById('modalArchivos'));
+let modalUpload = new bootstrap.Modal(document.getElementById('modalSeleccionArchivos'));
+let modalDelete = new bootstrap.Modal(document.getElementById('modalConfirmDelete'));
+const listaArchivosEl = document.getElementById('listaArchivos');
+const previewBoxEl = document.getElementById('previewBox');
+const uploadInputModal = document.getElementById('uploadInputModal');
+const uploadListEl = document.getElementById('uploadList');
+const btnOpenUpload = document.getElementById('btnOpenUpload');
+const btnDoUpload = document.getElementById('btnDoUpload');
+const uploadPathText = document.getElementById('uploadPathText');
+const delFileNameEl = document.getElementById('delFileName');
+const btnDeleteConfirm = document.getElementById('btnDeleteConfirm');
+let currentFilesPath = '';
+let deleteTargetB64 = '';
+
+function resetUploadSelection() {
+  if (uploadInputModal) uploadInputModal.value = '';
+  if (uploadListEl) uploadListEl.innerHTML = '<li class="list-group-item text-muted">Sin archivos seleccionados.</li>';
+  if (btnDoUpload) btnDoUpload.disabled = true;
+}
+
+function cargarArchivos(path) {
+  const url = new URL('listar_archivos.php', location.href);
+  url.searchParams.set('path', path);
+
+  if (listaArchivosEl) listaArchivosEl.innerHTML = '<li class="list-group-item">Cargando…</li>';
+  if (previewBoxEl) previewBoxEl.innerHTML = '<div class="text-muted">Selecciona un archivo para previsualizar…</div>';
+
+  return fetch(url)
+    .then(r => r.json())
+    .then(data => {
+      if (!listaArchivosEl) return;
+      listaArchivosEl.innerHTML = '';
+      if (!data.files || data.files.length === 0) {
+        listaArchivosEl.innerHTML = '<li class="list-group-item text-muted">Sin archivos</li>';
+        return;
+      }
+      data.files.forEach(f => {
+        const li = document.createElement('li');
+        li.className = 'list-group-item d-flex justify-content-between align-items-center';
+        li.innerHTML = `
+        <span class="cursor-pointer" data-preview="${f.previewUrl}" data-ext="${f.ext}">${f.name}</span>
+        <div class="d-flex gap-2">
+          <a class="btn btn-sm btn-outline-secondary" href="${f.downloadUrl}">Descargar</a>
+          <button class="btn btn-sm btn-outline-danger btn-delete-file" type="button" data-b64="${f.b64 || ''}" data-name="${f.name}">✕</button>
+        </div>
+      `;
+        li.querySelector('span').addEventListener('click', () => {
+          renderPreview(f.previewUrl, f.ext);
+        });
+        li.querySelector('.btn-delete-file').addEventListener('click', (evt) => {
+          deleteTargetB64 = evt.currentTarget.dataset.b64 || '';
+          const nombre = evt.currentTarget.dataset.name || '';
+          if (delFileNameEl) delFileNameEl.textContent = nombre || '(sin nombre)';
+          modalDelete.show();
+        });
+        listaArchivosEl.appendChild(li);
+      });
+    })
+    .catch(() => {
+      if (listaArchivosEl) {
+        listaArchivosEl.innerHTML = '<li class="list-group-item text-danger">No se pudo cargar la lista.</li>';
+      }
+    });
+}
 
 document.addEventListener('click', (e) => {
   const btn = e.target.closest('.ver-carpeta');
@@ -738,35 +845,12 @@ document.addEventListener('click', (e) => {
 
   const path = btn.dataset.path || '';
   const rad  = btn.dataset.rad || '';
-  document.getElementById('modalRad').textContent = rad || '—';
-  document.getElementById('modalPath').textContent = path || '—';
+  document.getElementById('modalRad').textContent = rad || '-';
+  document.getElementById('modalPath').textContent = path || '-';
 
-  const url = new URL('listar_archivos.php', location.href);
-  url.searchParams.set('path', path);
-
-  const lista = document.getElementById('listaArchivos');
-  lista.innerHTML = '<li class="list-group-item">Cargando…</li>';
-  document.getElementById('previewBox').innerHTML = '<div class="text-muted">Selecciona un archivo para previsualizar…</div>';
-
-  fetch(url).then(r => r.json()).then(data => {
-    lista.innerHTML = '';
-    if (!data.files || data.files.length === 0) {
-      lista.innerHTML = '<li class="list-group-item text-muted">Sin archivos</li>';
-      return;
-    }
-    data.files.forEach(f => {
-      const li = document.createElement('li');
-      li.className = 'list-group-item d-flex justify-content-between align-items-center';
-      li.innerHTML = `
-        <span class="cursor-pointer" data-preview="${f.previewUrl}" data-ext="${f.ext}">${f.name}</span>
-        <a class="btn btn-sm btn-outline-secondary" href="${f.downloadUrl}">Descargar</a>
-      `;
-      li.querySelector('span').addEventListener('click', () => {
-        renderPreview(f.previewUrl, f.ext);
-      });
-      lista.appendChild(li);
-    });
-  });
+  currentFilesPath = path;
+  resetUploadSelection();
+  cargarArchivos(path);
 
   bsModal.show();
 });
@@ -784,6 +868,93 @@ function renderPreview(url, ext) {
     box.innerHTML = `<div class="p-3">No hay vista previa para .${ext}. Use descargar.</div>`;
   }
 }
+
+btnOpenUpload?.addEventListener('click', () => {
+  if (!currentFilesPath) { alert('No hay ruta destino.'); return; }
+  resetUploadSelection();
+  if (uploadPathText) uploadPathText.textContent = currentFilesPath;
+  modalUpload.show();
+});
+
+uploadInputModal?.addEventListener('change', (e) => {
+  const files = Array.from(e.target.files || []);
+  if (!uploadListEl || !btnDoUpload) return;
+  uploadListEl.innerHTML = '';
+  if (files.length === 0) {
+    uploadListEl.innerHTML = '<li class="list-group-item text-muted">Sin archivos seleccionados.</li>';
+    btnDoUpload.disabled = true;
+    return;
+  }
+  files.forEach(f => {
+    const li = document.createElement('li');
+    li.className = 'list-group-item d-flex justify-content-between align-items-center';
+    li.textContent = `${f.name} (${Math.ceil(f.size/1024)} KB)`;
+    uploadListEl.appendChild(li);
+  });
+  btnDoUpload.disabled = false;
+});
+
+btnDoUpload?.addEventListener('click', async () => {
+  const files = Array.from(uploadInputModal?.files || []);
+  if (!currentFilesPath) { alert('No hay ruta destino.'); return; }
+  if (files.length === 0) { alert('Selecciona archivos antes de subir.'); return; }
+
+  btnDoUpload.disabled = true;
+  const originalText = btnDoUpload.textContent;
+  btnDoUpload.textContent = 'Subiendo...';
+
+  const fd = new FormData();
+  fd.append('path', currentFilesPath);
+  files.forEach(f => fd.append('files[]', f));
+
+  try {
+    const resp = await fetch('subir_archivos.php', { method: 'POST', body: fd });
+    const data = await resp.json();
+    if (!data.ok) {
+      alert(data.msg || 'No se pudo subir los archivos.');
+    } else {
+      alert(data.msg || 'Archivos subidos.');
+      resetUploadSelection();
+      modalUpload.hide();
+      if (currentFilesPath) cargarArchivos(currentFilesPath);
+    }
+  } catch (err) {
+    console.error(err);
+    alert('Error de red al subir archivos.');
+  } finally {
+    btnDoUpload.textContent = originalText;
+    btnDoUpload.disabled = false;
+  }
+});
+
+btnDeleteConfirm?.addEventListener('click', async () => {
+  if (!deleteTargetB64) { alert('No hay archivo seleccionado.'); return; }
+  btnDeleteConfirm.disabled = true;
+  const originalText = btnDeleteConfirm.textContent;
+  btnDeleteConfirm.textContent = 'Eliminando...';
+
+  const fd = new FormData();
+  fd.append('b64', deleteTargetB64);
+
+  try {
+    const resp = await fetch('eliminar_archivo.php', { method: 'POST', body: fd });
+    const data = await resp.json();
+    if (!data.ok) {
+      alert(data.msg || 'No se pudo eliminar el archivo.');
+    } else {
+      alert(data.msg || 'Archivo eliminado.');
+      deleteTargetB64 = '';
+      modalDelete.hide();
+      if (currentFilesPath) cargarArchivos(currentFilesPath);
+    }
+  } catch (err) {
+    console.error(err);
+    alert('Error de red al eliminar.');
+  } finally {
+    btnDeleteConfirm.textContent = originalText;
+    btnDeleteConfirm.disabled = false;
+  }
+});
 
 // ---------- MODAL OBSERVACIONES ----------
 let modalObs = new bootstrap.Modal(document.getElementById('modalObservaciones'));
