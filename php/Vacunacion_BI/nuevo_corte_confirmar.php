@@ -70,7 +70,7 @@ $updateSql = "
 UPDATE v
 SET v.FechaAplicacionMinisterio = t.FechaUltimaVacuna, v.corte = ?
 FROM Vacunacion.dbo.VacunacionFiebreAmarilla v
-JOIN $tempTable t ON v.TipoDocumento = t.TipoDocumento AND v.NumeroDocumento = t.NumeroDocumento
+JOIN [$tempTable] t ON v.TipoDocumento = t.TipoDocumento AND v.NumeroDocumento = t.NumeroDocumento
 WHERE v.FechaAplicacionMinisterio IS NULL
 ";
 
@@ -78,7 +78,12 @@ $stmt = sqlsrv_query($conn, $updateSql, [$corte]);
 if ($stmt === false) {
     sqlsrv_rollback($conn);
     http_response_code(500);
-    echo json_encode(['success' => false, 'message' => 'Error al actualizar corte', 'sqlsrv' => sqlsrv_errors()]);
+    echo json_encode([
+        'success' => false,
+        'message' => 'Error al actualizar corte',
+        'sqlsrv' => sqlsrv_errors(),
+        'query' => $updateSql
+    ]);
     exit;
 }
 $actualizados = sqlsrv_rows_affected($stmt);
