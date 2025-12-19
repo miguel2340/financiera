@@ -219,7 +219,7 @@ $isRoot = isset($_SESSION['tipo_usuario_id']) && $_SESSION['tipo_usuario_id'] ==
                 </div>
             </div>
 
-                        <?php if ($isRoot): ?>
+            <?php if ($isRoot): ?>
             <div id="tab-nuevo-corte" data-tab-panel="tab-nuevo-corte" class="hidden">
                 <div class="w-full h-full bg-gray-50 border border-dashed border-blue-200 rounded-lg p-6 space-y-4">
                     <div>
