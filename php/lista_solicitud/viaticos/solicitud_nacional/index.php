@@ -320,14 +320,16 @@ $stmt = sqlsrv_query($conn, $sql, $paramsData);
   <?php while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)): ?>
     <?php
       $radicado_via = $row['rad_via'] ?? '';
-      $proceso_view = $row['proceso'] ?? null;
+      $proceso_bd   = trim((string)($row['proceso'] ?? ''));
 
-      if ($proceso_view === null || $proceso_view === '') {
-          $proceso_view = 'Revisión';
-      }
-      if (strpos((string)$radicado_via, '.') !== false) {
+      // si viene vacío en BD, lo tratamos como "Revision"
+      $proceso_view = $proceso_bd !== '' ? $proceso_bd : 'Revision';
+
+      // SOLO si NO hay proceso real (o está en Revision), y tiene punto -> mostrar Legalización
+      if (($proceso_bd === '' || strcasecmp($proceso_bd, 'Revision') === 0) && strpos((string)$radicado_via, '.') !== false) {
           $proceso_view = 'Legalización';
       }
+
 
       $apr_dep_val = strtoupper(trim((string)($row['apr_departamental'] ?? '')));
       $es_objetado = ($apr_dep_val === 'OBJETADO');
@@ -392,7 +394,7 @@ $stmt = sqlsrv_query($conn, $sql, $paramsData);
 <td>
   <button type="button"
           class="btn btn-blue ver-observaciones-btn"
-          data-radicado="<?= htmlspecialchars((string)$row['radicado']) ?>">
+          data-radicado="<?= htmlspecialchars((string)$row['rad_via']) ?>">
     📝 Observación
   </button>
 </td>

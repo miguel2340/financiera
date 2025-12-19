@@ -6,7 +6,7 @@ if (!is_dir($ruta)) {
     exit;
 }
 
-$carpeta_web = str_replace('C:/FINANCIERA', '/financiera', $ruta);
+$carpeta_web = str_replace('E:/FINANCIERA', '/financiera', $ruta);
 $carpeta_web = str_replace('\\', '/', $carpeta_web);
 
 $archivos = array_diff(scandir($ruta), ['.', '..']);

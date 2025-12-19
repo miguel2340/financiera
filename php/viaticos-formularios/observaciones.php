@@ -93,23 +93,22 @@ N AS (
 
   UNION ALL
 
-  -- ✅ 4b) Nacional “Subsanación” (creacion_viaticos) -> misma regla ANTIGUO
-  SELECT
-    'NACIONAL' AS tipo,
-    e.fecha_estado AS fecha,
-    CASE
-      WHEN e.fecha_solicitud IS NOT NULL
-       AND CAST(e.fecha_solicitud AS date) <= CONVERT(date,'2025-12-17')
-        THEN CONCAT('ANTIGUO: ', e.observacion)
-      ELSE e.observacion
-    END AS observacion,
-    CAST(ISNULL((SELECT id_resp FROM K), e.id_solicitudes) AS float) + 0.41 AS sort_key
-  FROM E e
-  CROSS JOIN K
-  WHERE e.evento = 'creacion_viaticos'
-    AND UPPER(LTRIM(RTRIM(ISNULL(e.estado_proceso,'')))) = 'SUBSANACION'
-    AND e.observacion IS NOT NULL
-    AND LTRIM(RTRIM(e.observacion)) <> ''
+-- ✅ 4b) Nacional desde creacion_viaticos -> misma regla ANTIGUO (incluye Rechazado / Aprobado / Subsanacion)
+SELECT
+  'NACIONAL' AS tipo,
+  e.fecha_estado AS fecha,
+  CASE
+    WHEN e.fecha_solicitud IS NOT NULL
+     AND CAST(e.fecha_solicitud AS date) <= CONVERT(date,'2025-12-17')
+      THEN CONCAT('ANTIGUO: ', e.observacion)
+    ELSE e.observacion
+  END AS observacion,
+  CAST(e.id_solicitudes AS float) + 0.41 AS sort_key
+FROM E e
+WHERE e.evento IN ('creacion_viaticos','actualizacion_viaticos')
+  AND e.observacion IS NOT NULL
+  AND LTRIM(RTRIM(e.observacion)) <> ''
+
 
   UNION ALL
 

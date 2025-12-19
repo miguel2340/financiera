@@ -17,7 +17,7 @@ $identificacion = $_GET['identificacion'] ?? '';
 if (empty($departamento) || empty($identificacion)) {
     $error = "Faltan datos en la URL.";
 } else {
-    $basePath = "C:\\FINANCIERA\\$departamento\\$identificacion";
+    $basePath = "E:\\FINANCIERA\\$departamento\\$identificacion";
 
     // Crear carpeta base si no existe
     if (!is_dir($basePath)) {

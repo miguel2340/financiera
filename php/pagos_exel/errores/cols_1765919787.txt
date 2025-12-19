@@ -1,0 +1,6 @@
+Fila 2 tenía 16 columnas -> +2 (ahora 18).
+Fila 3 tenía 16 columnas -> +2 (ahora 18).
+Fila 4 tenía 16 columnas -> +2 (ahora 18).
+Fila 5 tenía 16 columnas -> +2 (ahora 18).
+Fila 6 tenía 16 columnas -> +2 (ahora 18).
+Fila 7 tenía 16 columnas -> +2 (ahora 18).

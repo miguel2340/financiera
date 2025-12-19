@@ -63,8 +63,8 @@ if (empty($departamento) || empty($identificacion)) {
     $depSan  = sanitizarNombre($departamento);
     $idSan   = sanitizarNombre($identificacion);
 
-    // ⚠️ Cambia esta base si prefieres otra ruta (ej. C:\xampp\uploads\FINANCIERA)
-    $basePath = "C:\\FINANCIERA\\{$depSan}\\{$idSan}";
+
+    $basePath = "E:\\FINANCIERA\\{$depSan}\\{$idSan}";
     try {
         // Verificar/crear carpetas
         $parent = dirname($basePath);

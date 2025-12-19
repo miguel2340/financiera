@@ -1,6 +1,6 @@
 <?php
 // archivo: common_fs.php
-define('SOPORTES_BASE', 'C:\\FINANCIERA'); 
+define('SOPORTES_BASE', 'E:\\FINANCIERA'); 
 // o red: define('SOPORTES_BASE', '\\\\SERVER\\soportes$');
 
 // Normaliza una ruta de entrada (relativa o absoluta) a una ruta absoluta segura dentro de SOPORTES_BASE

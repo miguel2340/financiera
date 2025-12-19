@@ -1,0 +1,1 @@
+id=(vacío) id vacío, nit vacío, voucher vacío, fecha_pago inválida

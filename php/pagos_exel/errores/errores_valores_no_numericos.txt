@@ -1,0 +1,2 @@
+id=(vacío) valor_factura no numérico
+id=(vacío) valor_pagado no numérico

@@ -69,7 +69,9 @@ SELECT
     b.descripcion AS banco,
     t.descripcion AS tipo_cuenta,
     s.numero_cuenta,
-    CONCAT(s.nombre,' ', s.segundo_n, ' ', s.primer_p, ' ', s.segundo_p) AS titular_cuenta
+    CONCAT(s.nombre,' ', s.segundo_n, ' ', s.primer_p, ' ', s.segundo_p) AS titular_cuenta,
+	pv.comprobante,
+	pv.fecha
 FROM dbo.solicitudes s
 JOIN e_last el ON el.radicado = s.radicado
 JOIN dbo.evento_solicitudes e 
@@ -79,6 +81,7 @@ JOIN afiliado_1 a
 LEFT JOIN dbo.municipio m ON a.codigo_dane_municipio_atencion = m.id
 LEFT JOIN dbo.banco b     ON s.entidad_bancaria = b.id
 LEFT JOIN dbo.tipo_cuenta t ON s.tipo_cuenta = t.id
+LEFT JOIN dbo.pagos_viaticos pv ON s.rad_via=pv.radicado
 ORDER BY TRY_CAST(s.rad_via AS INT);
 SQL;
 
