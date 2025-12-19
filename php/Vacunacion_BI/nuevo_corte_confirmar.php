@@ -4,6 +4,9 @@ require_once '../../config.php';
 
 header('Content-Type: application/json');
 
+// Forzar retorno de advertencias como errores para obtener detalle de fallos
+sqlsrv_configure('WarningsReturnAsErrors', 1);
+
 set_exception_handler(function ($e) {
     http_response_code(500);
     echo json_encode(['success' => false, 'message' => $e->getMessage()]);
@@ -42,6 +45,17 @@ if ($useDb === false) {
     exit;
 }
 
+$existsStmt = sqlsrv_query($conn, "SELECT 1 FROM sys.objects WHERE object_id = OBJECT_ID(?)", [$tempTable]);
+if ($existsStmt === false || !sqlsrv_fetch_array($existsStmt)) {
+    if ($existsStmt) {
+        sqlsrv_free_stmt($existsStmt);
+    }
+    http_response_code(400);
+    echo json_encode(['success' => false, 'message' => 'Tabla temporal no encontrada, revalida el archivo.']);
+    exit;
+}
+sqlsrv_free_stmt($existsStmt);
+
 if (!sqlsrv_begin_transaction($conn)) {
     http_response_code(500);
     echo json_encode(['success' => false, 'message' => 'No se pudo iniciar transaccion', 'sqlsrv' => sqlsrv_errors()]); 
@@ -70,7 +84,7 @@ $updateSql = "
 UPDATE v
 SET v.FechaAplicacionMinisterio = t.FechaUltimaVacuna, v.corte = ?
 FROM Vacunacion.dbo.VacunacionFiebreAmarilla v
-JOIN [$tempTable] t ON v.TipoDocumento = t.TipoDocumento AND v.NumeroDocumento = t.NumeroDocumento
+JOIN $tempTable t ON v.TipoDocumento = t.TipoDocumento AND v.NumeroDocumento = t.NumeroDocumento
 WHERE v.FechaAplicacionMinisterio IS NULL
 ";
 
@@ -81,7 +95,7 @@ if ($stmt === false) {
     echo json_encode([
         'success' => false,
         'message' => 'Error al actualizar corte',
-        'sqlsrv' => sqlsrv_errors(),
+        'sqlsrv' => sqlsrv_errors(SQLSRV_ERR_ALL),
         'query' => $updateSql
     ]);
     exit;
@@ -97,7 +111,7 @@ if (!sqlsrv_commit($conn)) {
     exit;
 }
 
-sqlsrv_query($conn, "IF OBJECT_ID('tempdb..$tempTable') IS NOT NULL DROP TABLE $tempTable");
+sqlsrv_query($conn, "IF OBJECT_ID('$tempTable') IS NOT NULL DROP TABLE $tempTable");
 unset($_SESSION['nuevo_corte']);
 
 echo json_encode([

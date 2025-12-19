@@ -31,7 +31,7 @@ $file = $_FILES['file'];
 $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
 $tmpPath = $file['tmp_name'];
 
-$tempTable = '##tmp_nuevo_corte_' . preg_replace('/[^A-Za-z0-9]/', '', session_id());
+$tempTable = 'tmp_nuevo_corte_' . preg_replace('/[^A-Za-z0-9]/', '', session_id());
 
 function extractTxtToTemp($tmpPath, $ext)
 {
@@ -148,8 +148,8 @@ $mapTipo = [
     'PT' => 'Permiso de Protección Temporal',
     'PE' => 'Permiso Especial De Permanencia',
 ];
-sqlsrv_query($conn, "IF OBJECT_ID('tempdb..$tempTable') IS NOT NULL DROP TABLE $tempTable");
-$createSql = "CREATE TABLE $tempTable (
+sqlsrv_query($conn, "IF OBJECT_ID('Vacunacion.dbo.$tempTable') IS NOT NULL DROP TABLE Vacunacion.dbo.$tempTable");
+$createSql = "CREATE TABLE Vacunacion.dbo.$tempTable (
     TipoDocumento NVARCHAR(100) NOT NULL,
     NumeroDocumento NVARCHAR(50) NOT NULL,
     FechaUltimaVacuna NVARCHAR(50) NOT NULL
@@ -165,7 +165,7 @@ $paramDoc = null;
 $paramFecha = null;
 $insertStmt = sqlsrv_prepare(
     $conn,
-    "INSERT INTO $tempTable (TipoDocumento, NumeroDocumento, FechaUltimaVacuna) VALUES (?,?,?)",
+    "INSERT INTO Vacunacion.dbo.$tempTable (TipoDocumento, NumeroDocumento, FechaUltimaVacuna) VALUES (?,?,?)",
     [
         &$paramTipo,
         &$paramDoc,
@@ -235,10 +235,10 @@ sqlsrv_free_stmt($insertStmt);
 
 $statsSql = "
 SELECT
-    (SELECT COUNT(*) FROM $tempTable) AS total_insertados,
-    (SELECT COUNT(*) FROM $tempTable t WHERE NOT EXISTS (SELECT 1 FROM Vacunacion.dbo.VacunacionFiebreAmarilla v WHERE v.TipoDocumento = t.TipoDocumento AND v.NumeroDocumento = t.NumeroDocumento)) AS no_encontrados,
-    (SELECT COUNT(*) FROM $tempTable t JOIN Vacunacion.dbo.VacunacionFiebreAmarilla v ON v.TipoDocumento = t.TipoDocumento AND v.NumeroDocumento = t.NumeroDocumento WHERE v.FechaAplicacionMinisterio IS NOT NULL) AS con_fecha_min,
-    (SELECT COUNT(*) FROM $tempTable t JOIN Vacunacion.dbo.VacunacionFiebreAmarilla v ON v.TipoDocumento = t.TipoDocumento AND v.NumeroDocumento = t.NumeroDocumento WHERE v.FechaAplicacionMinisterio IS NULL) AS aptos_calc
+    (SELECT COUNT(*) FROM Vacunacion.dbo.$tempTable) AS total_insertados,
+    (SELECT COUNT(*) FROM Vacunacion.dbo.$tempTable t WHERE NOT EXISTS (SELECT 1 FROM Vacunacion.dbo.VacunacionFiebreAmarilla v WHERE v.TipoDocumento = t.TipoDocumento AND v.NumeroDocumento = t.NumeroDocumento)) AS no_encontrados,
+    (SELECT COUNT(*) FROM Vacunacion.dbo.$tempTable t JOIN Vacunacion.dbo.VacunacionFiebreAmarilla v ON v.TipoDocumento = t.TipoDocumento AND v.NumeroDocumento = t.NumeroDocumento WHERE v.FechaAplicacionMinisterio IS NOT NULL) AS con_fecha_min,
+    (SELECT COUNT(*) FROM Vacunacion.dbo.$tempTable t JOIN Vacunacion.dbo.VacunacionFiebreAmarilla v ON v.TipoDocumento = t.TipoDocumento AND v.NumeroDocumento = t.NumeroDocumento WHERE v.FechaAplicacionMinisterio IS NULL) AS aptos_calc
 ";
 
 $totalInsertados = 0;
@@ -258,7 +258,7 @@ if ($stats) {
 
 $_SESSION['nuevo_corte'] = [
     'corte' => $nextCorte,
-    'temp_table' => $tempTable
+    'temp_table' => "Vacunacion.dbo.$tempTable"
 ];
 
 echo json_encode([
