@@ -18,8 +18,6 @@ set_error_handler(function ($severity, $message, $file, $line) {
     throw new ErrorException($message, 0, $severity, $file, $line);
 });
 
-// Cambia manualmente este valor cuando necesites mover el corte
-$CORTE_OBJETIVO = 26;
 $MAX_SIZE = 10 * 1024 * 1024; // 10 MB
 $ALLOWED_EXT = ['xlsx', 'xls'];
 
@@ -134,9 +132,21 @@ $candidatos = [];
 $rechazados = [];
 $totalLeidas = count($rows) - 1;
 
+// Obtener el último corte registrado en la tabla de resumen
+$corteStmt = sqlsrv_query($conn, "SELECT MAX(corte) AS corte FROM Vacunacion.dbo.VacunacionResumen");
+if ($corteStmt === false) {
+    respond(['success' => false, 'message' => 'No se pudo obtener el corte objetivo', 'sqlsrv' => sqlsrv_errors()], 500);
+}
+$corteRow = sqlsrv_fetch_array($corteStmt, SQLSRV_FETCH_ASSOC);
+sqlsrv_free_stmt($corteStmt);
+$CORTE_OBJETIVO = isset($corteRow['corte']) ? (int)$corteRow['corte'] : null;
+if ($CORTE_OBJETIVO === null) {
+    respond(['success' => false, 'message' => 'No se encontró corte en la tabla de resumen'], 400);
+}
+
 $selectSql = "SELECT FechaAplicacionMinisterio, FechaAplicacionDepartamento
 FROM Vacunacion.dbo.VacunacionFiebreAmarilla
-WHERE corte = ? AND TipoDocumento = ? AND NumeroDocumento = ?";
+WHERE TipoDocumento = ? AND NumeroDocumento = ?";
 
 for ($i = 2; $i <= count($rows); $i++) {
     $r = $rows[$i];
@@ -162,7 +172,7 @@ for ($i = 2; $i <= count($rows); $i++) {
         continue;
     }
 
-    $stmt = sqlsrv_query($conn, $selectSql, [$CORTE_OBJETIVO, $tipo, $doc]);
+    $stmt = sqlsrv_query($conn, $selectSql, [$tipo, $doc]);
     if ($stmt === false) {
         respond(['success' => false, 'message' => 'Error consultando base', 'sqlsrv' => sqlsrv_errors()], 500);
     }

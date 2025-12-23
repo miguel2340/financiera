@@ -9,10 +9,9 @@ if (!isset($_SESSION['tipo_usuario_id']) || ($_SESSION['tipo_usuario_id'] != 10 
     header('Location: ../menu.php');
     exit;
 }
+$isRoot = isset($_SESSION['tipo_usuario_id']) && $_SESSION['tipo_usuario_id'] == 1;
 
 ?>
-
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -120,6 +119,14 @@ if (!isset($_SESSION['tipo_usuario_id']) || ($_SESSION['tipo_usuario_id'] != 10 
                 aria-selected="false">
                 Actualizacion de datos
             </button>
+            <?php if ($isRoot): ?>
+            <button
+                class="tab-button px-5 py-3 text-sm font-semibold text-gray-600 bg-gray-50 border-b-2 border-transparent hover:text-blue-700 focus:outline-none"
+                data-tab-target="tab-nuevo-corte"
+                aria-selected="false">
+                Actualizar nuevo corte
+            </button>
+            <?php endif; ?>
         </div>
 
         <div class="p-4">
@@ -211,10 +218,50 @@ if (!isset($_SESSION['tipo_usuario_id']) || ($_SESSION['tipo_usuario_id'] != 10 
                     </div>
                 </div>
             </div>
+
+            <?php if ($isRoot): ?>
+            <div id="tab-nuevo-corte" data-tab-panel="tab-nuevo-corte" class="hidden">
+                <div class="w-full h-full bg-gray-50 border border-dashed border-blue-200 rounded-lg p-6 space-y-4">
+                    <div>
+                        <h2 class="text-lg font-semibold text-blue-700 mb-2">Actualizar nuevo corte (solo root)</h2>
+                        <p class="text-gray-700">Sube el archivo TXT del ministerio para preparar el siguiente corte y validar nuevos vacunados.</p>
+                    </div>
+
+                    <div id="newcut-dropzone" class="border-2 border-dashed border-blue-400 bg-white rounded-lg p-6 text-center cursor-pointer transition hover:border-blue-600 hover:bg-blue-50">
+                        <p class="text-sm text-gray-600 mb-2 font-semibold">Arrastra y suelta el archivo TXT aqui</p>
+                        <p class="text-xs text-gray-500">Formato esperado: campos separados por | con encabezado requerido.</p>
+                        <input id="newcut-file" type="file" accept=".txt,.zip,.rar" class="hidden" />
+                    </div>
+
+                    <div class="flex items-center justify-between">
+                        <div id="newcut-feedback" class="text-sm text-gray-700">Ningun archivo seleccionado.</div>
+                        <button id="newcut-validate" class="bg-blue-600 text-white px-4 py-2 rounded disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                            Validar nuevo corte
+                        </button>
+                    </div>
+
+                    <div id="newcut-summary" class="text-sm text-gray-700 bg-white border border-blue-100 rounded p-3 hidden"></div>
+
+                    <div id="newcut-card" class="grid grid-cols-1 gap-2 hidden">
+                        <div class="bg-white border border-green-200 rounded-lg p-6 text-center">
+                            <p class="text-sm text-gray-500">Aptos para actualizar</p>
+                            <p class="text-3xl font-semibold text-green-700" id="newcut-count-nuevos">0</p>
+                        </div>
+                        <div class="flex justify-center">
+                            <button id="newcut-confirm" class="bg-green-600 text-white px-6 py-3 rounded disabled:opacity-50 disabled:cursor-not-allowed hidden" disabled>
+                                Confirmar nuevo corte
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="text-xs text-gray-500">
+                        Encabezado requerido (pipe |): Consecutivo|Tipo de Documento|Numero de Documento|Primer Nombre|Primer Apellido|Fecha Nacimiento|Dane Dpto|Dane Municipio|Column 8|FechaUltimaVacuna. Se valida el siguiente corte (max corte + 1) y se identifica nuevos vacunados por llave Tipo+Documento.
+                    </div>
+                </div>
+            </div>
+            <?php endif; ?>
         </div>
     </div>
 
 </body>
 </html>
-
-

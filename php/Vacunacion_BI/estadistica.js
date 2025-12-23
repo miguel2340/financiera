@@ -8,7 +8,6 @@ function decodeUrl(encodedUrl) {
     }
 }
 
-
 function fetchPowerBIUrl() {
     fetch('get_url.php')
         .then(response => {
@@ -31,7 +30,10 @@ function fetchPowerBIUrl() {
 
 let selectedFile = null;
 let lastValidation = null;
+let newCutFile = null;
+let newCutAptos = 0;
 const maxFileSize = 10 * 1024 * 1024; // 10 MB
+const newCutMaxSize = 80 * 1024 * 1024; // 80 MB para ZIP/TXT
 const allowedExtensions = [".xlsx", ".xls"];
 const allowedMimeTypes = [
     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -129,6 +131,29 @@ function showSummary(message, isError = false) {
     summary.textContent = message;
 }
 
+function showNewCutFeedback(message, isError = false) {
+    const feedback = document.getElementById("newcut-feedback");
+    if (!feedback) return;
+    feedback.textContent = message;
+    feedback.classList.toggle("text-red-600", isError);
+    feedback.classList.toggle("text-gray-700", !isError);
+    feedback.classList.toggle("font-semibold", !isError);
+}
+
+function showNewCutSummary(message, isError = false) {
+    const summary = document.getElementById("newcut-summary");
+    if (!summary) return;
+    summary.classList.toggle("hidden", false);
+    summary.classList.toggle("text-red-700", isError);
+    summary.classList.toggle("text-green-700", !isError);
+    summary.textContent = message;
+}
+
+function updateNewCutCounts(nuevos) {
+    const nCount = document.getElementById("newcut-count-nuevos");
+    if (nCount) nCount.textContent = String(nuevos);
+}
+
 async function sendValidation() {
     const uploadButton = document.getElementById("upload-button");
     const confirmButton = document.getElementById("confirm-button");
@@ -180,6 +205,106 @@ async function sendValidation() {
         showUploadFeedback("Ocurrio un error al validar.", true);
     } finally {
         if (uploadButton) uploadButton.disabled = false;
+    }
+}
+
+async function sendNewCutValidation() {
+    const validateBtn = document.getElementById("newcut-validate");
+    const confirmBtn = document.getElementById("newcut-confirm");
+    if (!newCutFile || !validateBtn) {
+        showNewCutFeedback("Selecciona un archivo TXT antes de validar.", true);
+        return;
+    }
+
+    validateBtn.disabled = true;
+    showNewCutFeedback("Validando archivo...", false);
+    showNewCutSummary("Validando nuevo corte, espera un momento...", false);
+
+    const formData = new FormData();
+    formData.append("file", newCutFile);
+
+    try {
+        const response = await fetch("nuevo_corte_validar.php", {
+            method: "POST",
+            body: formData
+        });
+
+        const raw = await response.text();
+        let data;
+        try {
+            data = JSON.parse(raw);
+        } catch (err) {
+            throw new Error(raw || "Respuesta no valida del servidor al validar nuevo corte.");
+        }
+
+        if (!response.ok || !data || data.success === false) {
+            const msg = (data && data.message) ? data.message : raw;
+            throw new Error(msg || "Error al validar nuevo corte.");
+        }
+
+        const nuevosTotal = Number(data.nuevos_total) || 0;
+        const rechTotal = Number(data.rechazados_total) || 0;
+        const conFechaTotal = Number(data.con_fecha_ministerio_total) || 0;
+        const sinFechaTotal = Number(data.vacios_total) || 0;
+        const noEncontradosTotal = Number(data.no_encontrados_total) || 0;
+        const leidasTotal = Number(data.total_leidas) || 0;
+
+        updateNewCutCounts(nuevosTotal);
+        newCutAptos = nuevosTotal;
+        const card = document.getElementById("newcut-card");
+        if (card) card.classList.remove("hidden");
+
+        const msg = `Validacion nuevo corte completa. Siguiente corte: ${data.next_corte ?? "-"}, leidas: ${leidasTotal}, nuevos: ${nuevosTotal}, sin fecha: ${sinFechaTotal}, con fecha ministerio: ${conFechaTotal}, no encontrados: ${noEncontradosTotal}, rechazados: ${rechTotal}.`;
+        showNewCutSummary(msg, false);
+        showNewCutFeedback("Archivo listo, revisa los nuevos vacunados.", false);
+        if (confirmBtn) {
+            confirmBtn.classList.remove("hidden");
+            confirmBtn.disabled = !(newCutAptos > 0);
+        }
+    } catch (error) {
+        console.error(error);
+        showNewCutSummary("Error en la validacion de nuevo corte: " + error.message, true);
+        showNewCutFeedback("Ocurrio un error al validar.", true);
+    } finally {
+        validateBtn.disabled = false;
+    }
+}
+
+async function sendNewCutConfirmation() {
+    const confirmBtn = document.getElementById("newcut-confirm");
+    if (!newCutAptos || newCutAptos === 0) {
+        showNewCutSummary("No hay registros validados para actualizar.", true);
+        return;
+    }
+    if (confirmBtn) confirmBtn.disabled = true;
+    showNewCutSummary("Aplicando nuevo corte...", false);
+    try {
+        const response = await fetch("nuevo_corte_confirmar.php", { method: "POST" });
+        const raw = await response.text();
+        let data;
+        try {
+            data = JSON.parse(raw);
+        } catch (err) {
+            throw new Error(raw || "Respuesta no valida del servidor al confirmar nuevo corte.");
+        }
+        if (!response.ok || !data || data.success === false) {
+            const msg = (data && data.message) ? data.message : raw;
+            throw new Error(msg || "Error al confirmar nuevo corte.");
+        }
+        const msg = `Actualizacion nuevo corte aplicada. Corte: ${data.corte ?? "-"}, intentos: ${data.intentos ?? 0}, actualizados: ${data.actualizados ?? 0}.`;
+        showNewCutSummary(msg, false);
+        showNewCutFeedback("Actualizacion ejecutada.", false);
+        updateNewCutCounts(0);
+        newCutAptos = 0;
+        if (confirmBtn) {
+            confirmBtn.disabled = true;
+            confirmBtn.classList.add("hidden");
+        }
+    } catch (error) {
+        console.error(error);
+        showNewCutSummary("Error al confirmar nuevo corte: " + error.message, true);
+    } finally {
+        if (confirmBtn) confirmBtn.disabled = true;
     }
 }
 
@@ -279,6 +404,74 @@ function setupUploadZone() {
     }
 }
 
+function setupNewCutUpload() {
+    const dropZone = document.getElementById("newcut-dropzone");
+    const fileInput = document.getElementById("newcut-file");
+    const validateBtn = document.getElementById("newcut-validate");
+    const confirmBtn = document.getElementById("newcut-confirm");
+
+    if (!dropZone || !fileInput || !validateBtn) {
+        return;
+    }
+
+    const toggleHighlight = (active) => {
+        dropZone.classList.toggle("border-blue-600", active);
+        dropZone.classList.toggle("bg-blue-50", active);
+    };
+
+    dropZone.addEventListener("click", () => fileInput.click());
+
+    dropZone.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        toggleHighlight(true);
+    });
+
+    dropZone.addEventListener("dragleave", (e) => {
+        e.preventDefault();
+        toggleHighlight(false);
+    });
+
+    dropZone.addEventListener("drop", (e) => {
+        e.preventDefault();
+        toggleHighlight(false);
+        const file = e.dataTransfer.files && e.dataTransfer.files[0];
+        if (file) {
+            if (file.size > newCutMaxSize) {
+                showNewCutFeedback("El archivo supera 40 MB. Sube uno mas liviano.", true);
+                return;
+            }
+            newCutFile = file;
+            validateBtn.disabled = false;
+            showNewCutFeedback(`Listo: ${file.name} listo para validar.`, false);
+        }
+    });
+
+    fileInput.addEventListener("change", (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (file) {
+            if (file.size > newCutMaxSize) {
+                showNewCutFeedback("El archivo supera 40 MB. Sube uno mas liviano.", true);
+                return;
+            }
+            newCutFile = file;
+            validateBtn.disabled = false;
+            showNewCutFeedback(`Listo: ${file.name} listo para validar.`, false);
+        }
+    });
+
+    validateBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        sendNewCutValidation();
+    });
+
+    if (confirmBtn) {
+        confirmBtn.addEventListener("click", (e) => {
+            e.preventDefault();
+            sendNewCutConfirmation();
+        });
+    }
+}
+
 function initTabs() {
     const tabButtons = document.querySelectorAll("[data-tab-target]");
     const tabPanels = document.querySelectorAll("[data-tab-panel]");
@@ -314,6 +507,7 @@ window.onload = function() {
     fetchPowerBIUrl();
     initTabs();
     setupUploadZone();
+    setupNewCutUpload();
 
     // Crear margenes solo si no existen
     if (!document.querySelector(".transparent-margin")) {
