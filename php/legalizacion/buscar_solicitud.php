@@ -73,7 +73,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['radicado'])) {
         a.correo_principal,
         a.direccion_Residencia_cargue
     FROM solicitudes s
-    JOIN afiliado a ON s.numero_identificacion_titular = a.numero_documento
+    JOIN afiliado a 
+  ON REPLACE(REPLACE(REPLACE(
+         LTRIM(RTRIM(s.numero_identificacion_titular)),
+         ' ', ''), '.', ''), '-', '')
+   =
+     REPLACE(REPLACE(REPLACE(
+         LTRIM(RTRIM(a.numero_documento)),
+         ' ', ''), '.', ''), '-', '')
+
     WHERE s.rad_via = ?";
 
     $stmt = sqlsrv_query($conn, $sql, [$radicado]);
