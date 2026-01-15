@@ -15,15 +15,7 @@ function isNodeRunning($port = 3000) {
 }
 
 // Función para iniciar Node.js si no está en ejecución
-function startNodeServer() {
-    $nodePath = 'C:\Program Files\nodejs\node.exe'; // Ruta de Node.js
-    $serverPath = 'C:\xampp\htdocs\aplicacion\proyecto_mapa\src\server.js'; // Ruta del servidor Node.js
 
-    if (!isNodeRunning(3000)) {
-        $command = "\"$nodePath\" \"$serverPath\" > NUL 2>&1 &";
-        pclose(popen($command, 'r'));
-    }
-}
 
 // Función para verificar el usuario con contraseñas encriptadas
 function verificarUsuario($conn, $identificacion, $contrasena) {
@@ -40,7 +32,6 @@ function verificarUsuario($conn, $identificacion, $contrasena) {
     if ($usuario && password_verify($contrasena, $usuario['contrasena'])) {
         return $usuario;
     }
-
     return false;
 }
 
@@ -74,8 +65,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['login'])) {
         $_SESSION['tipo_usuario_id2'] = $usuario['tipo_usuario_id2'];
         $_SESSION['session_id'] = $newSessionId;
 
-        // 🔹 Iniciar el servidor Node.js si no está corriendo
-        startNodeServer();
+        
+        // ✅ Redirección por tipo de usuario
+        if ((int)$usuario['tipo_usuario_id'] === 11 || (int)$usuario['tipo_usuario_id2'] === 11) {
+            header("Location: http://200.116.57.140:8080/Auditoria-app/public/");
+            exit();
+        }
 
         header("Location: php/menu.php");
         exit();
