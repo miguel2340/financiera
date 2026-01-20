@@ -1,7 +1,10 @@
 <?php
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
-require_once __DIR__ . '/../../config.php'; // ajusta a ../config.php si aplica
+require_once __DIR__ . '/../../config.php'; 
+ini_set('max_execution_time', '300'); // 5 minutos
+set_time_limit(300);
+// ajusta a ../config.php si aplica
 ?>
 <!doctype html>
 <html lang="es">
